@@ -18,21 +18,22 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const apiKey = process.env.SVIX_API_KEY
-    console.log('SVIX_API_KEY exists:', !!apiKey)
-    console.log('SVIX_API_KEY length:', apiKey?.length)
-    console.log('SVIX_API_KEY prefix:', apiKey?.substring(0, 4))
+    const rawApiKey = process.env.SVIX_API_KEY
+    const apiKey = rawApiKey?.replace('.eu', '').trim()
     
-    if (!apiKey) {
-      throw new Error('SVIX_API_KEY is not defined')
-    }
+    console.log('API Key details:', {
+      exists: !!apiKey,
+      length: apiKey?.length,
+      prefix: apiKey?.substring(0, 5),
+      suffix: rawApiKey?.slice(-3),
+      originalLength: rawApiKey?.length,
+      cleanedLength: apiKey?.length
+    })
     
-    if (!apiKey.startsWith('test_')) {
-      throw new Error('SVIX_API_KEY should start with test_')
+    if (!apiKey?.startsWith('test_')) {
+      throw new Error('API key must start with test_')
     }
 
-    console.log('API Key validation passed')
-    
     const { Svix } = await import('svix')
     const svix = new Svix(apiKey)
 
@@ -50,7 +51,8 @@ export default async function handler(req: Request) {
     console.error('Error details:', {
       message: error.message,
       type: error.constructor.name,
-      code: error.code
+      code: error.code,
+      originalKey: process.env.SVIX_API_KEY
     })
     
     return new Response(
