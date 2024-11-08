@@ -1,7 +1,40 @@
 {
+  "trailingSlash": false,
+  "functions": {
+    "api/**/*": {
+      "includeFiles": "lib/**/*"
+    }
+  },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" }
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/([^.@]+)", "destination": "/" }
   ],
-  "buildCommand": "yarn build",
-  "outputDirectory": "dist"
+  "headers": [
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    }
+  ]
 } 
