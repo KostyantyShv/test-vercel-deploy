@@ -15,10 +15,10 @@ export default async function handler(req: Request) {
   }
 
   try {
+    const testToken = process.env.SVIX_API_KEY?.replace('.eu', '') || 'test_key'
+    
     const { Svix } = await import('svix')
-    const svix = new Svix(process.env.SVIX_API_KEY || 'test_key', {
-      serverUrl: 'https://api.eu.svix.com'
-    })
+    const svix = new Svix(testToken)
     const result = await svix.application.list()
     
     return new Response(JSON.stringify(result), {
@@ -28,7 +28,10 @@ export default async function handler(req: Request) {
   } catch (error: any) {
     console.error('Svix error:', error)
     return new Response(
-      JSON.stringify({ error: error.message || 'Unknown error occurred' }), 
+      JSON.stringify({ 
+        error: error.message || 'Unknown error occurred',
+        token: process.env.SVIX_API_KEY ? 'Token exists' : 'No token found'
+      }), 
       { 
         status: 500,
         headers,
