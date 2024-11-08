@@ -3,8 +3,8 @@ import useSWR from 'swr'
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 const API_URL = import.meta.env.PROD 
-  ? 'https://test-vercel-deploy-nine-steel.vercel.app/api/webhook'
-  : '/api/webhook'
+  ? 'https://test-vercel-deploy-nine-steel.vercel.app/api/svix'
+  : '/api/svix'
 
 function App() {
   const { data: apiData, error: apiError } = useSWR(API_URL, fetcher)
