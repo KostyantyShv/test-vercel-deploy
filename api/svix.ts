@@ -18,52 +18,49 @@ export default async function handler(req: Request) {
   }
 
   try {
-    console.log('SVIX_API_KEY exists:', !!process.env.SVIX_API_KEY)
+    const apiKey = process.env.SVIX_API_KEY
+    console.log('SVIX_API_KEY exists:', !!apiKey)
+    console.log('SVIX_API_KEY length:', apiKey?.length)
+    console.log('SVIX_API_KEY prefix:', apiKey?.substring(0, 4))
     
-    const { Svix } = await import('svix')
-    console.log('Svix imported successfully')
-    
-    const svix = new Svix(process.env.SVIX_API_KEY || 'test_key', {
-      serverUrl: 'https://api.eu.svix.com'
-    })
-    console.log('Svix instance created')
-
-    // Спочатку спробуємо отримати список додатків
-    const apps = await svix.application.list()
-    console.log('Existing apps:', apps)
-
-    // Якщо додатків немає, створимо новий
-    if (!apps.data?.length) {
-      console.log('No apps found, creating new one')
-      const app = await svix.application.create({
-        name: "Test Application",
-        uid: "test-app-1"
-      })
-      console.log('New app created:', app)
+    if (!apiKey) {
+      throw new Error('SVIX_API_KEY is not defined')
     }
     
+    if (!apiKey.startsWith('test_')) {
+      throw new Error('SVIX_API_KEY should start with test_')
+    }
+
+    console.log('API Key validation passed')
+    
+    const { Svix } = await import('svix')
+    const svix = new Svix(apiKey)
+
+    const apps = await svix.application.list()
+    console.log('Applications found:', apps.data?.length || 0)
+    
     return new Response(JSON.stringify({
-      message: "Svix operation completed",
-      apps: apps.data
+      success: true,
+      applications: apps.data || []
     }), {
       status: 200,
       headers,
     })
   } catch (error: any) {
-    console.error('Svix error details:', {
+    console.error('Error details:', {
       message: error.message,
-      code: error.code,
-      body: error.body,
-      headers: error.headers
+      type: error.constructor.name,
+      code: error.code
     })
     
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Unknown error occurred',
-        token: process.env.SVIX_API_KEY ? 'Token exists' : 'No token found'
+        success: false,
+        error: error.message,
+        type: error.constructor.name
       }), 
       { 
-        status: 500,
+        status: error.code || 500,
         headers,
       }
     )
