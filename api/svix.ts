@@ -3,6 +3,8 @@ export const config = {
 }
 
 export default async function handler(req: Request) {
+  console.log('Request received:', req.method)
+  
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -11,22 +13,50 @@ export default async function handler(req: Request) {
   }
 
   if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS request')
     return new Response(null, { status: 204, headers })
   }
 
   try {
-    const testToken = process.env.SVIX_API_KEY?.replace('.eu', '') || 'test_key'
+    console.log('SVIX_API_KEY exists:', !!process.env.SVIX_API_KEY)
     
     const { Svix } = await import('svix')
-    const svix = new Svix(testToken)
-    const result = await svix.application.list()
+    console.log('Svix imported successfully')
     
-    return new Response(JSON.stringify(result), {
+    const svix = new Svix(process.env.SVIX_API_KEY || 'test_key', {
+      serverUrl: 'https://api.eu.svix.com'
+    })
+    console.log('Svix instance created')
+
+    // Спочатку спробуємо отримати список додатків
+    const apps = await svix.application.list()
+    console.log('Existing apps:', apps)
+
+    // Якщо додатків немає, створимо новий
+    if (!apps.data?.length) {
+      console.log('No apps found, creating new one')
+      const app = await svix.application.create({
+        name: "Test Application",
+        uid: "test-app-1"
+      })
+      console.log('New app created:', app)
+    }
+    
+    return new Response(JSON.stringify({
+      message: "Svix operation completed",
+      apps: apps.data
+    }), {
       status: 200,
       headers,
     })
   } catch (error: any) {
-    console.error('Svix error:', error)
+    console.error('Svix error details:', {
+      message: error.message,
+      code: error.code,
+      body: error.body,
+      headers: error.headers
+    })
+    
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Unknown error occurred',
