@@ -5,11 +5,11 @@ export async function handler() {
     const svix = new Svix('test_key')
     const result = await svix.application.list()
     return { statusCode: 200, body: JSON.stringify(result) }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Svix error:', error)
     return { 
       statusCode: 500, 
-      body: JSON.stringify({ error: error.message }) 
+      body: JSON.stringify({ error: error.message || 'Unknown error occurred' }) 
     }
   }
 } 
