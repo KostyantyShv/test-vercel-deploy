@@ -3,8 +3,6 @@ export const config = {
 }
 
 export default async function handler(req: Request) {
-  console.log('Request received:', req.method)
-  
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -13,56 +11,67 @@ export default async function handler(req: Request) {
   }
 
   if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS request')
     return new Response(null, { status: 204, headers })
   }
 
   try {
-    const rawApiKey = process.env.SVIX_API_KEY
-    const apiKey = rawApiKey?.replace('.eu', '').trim()
+    const apiKey = process.env.SVIX_API_KEY?.replace('.eu', '')
     
-    console.log('API Key details:', {
-      exists: !!apiKey,
-      length: apiKey?.length,
-      prefix: apiKey?.substring(0, 5),
-      suffix: rawApiKey?.slice(-3),
-      originalLength: rawApiKey?.length,
-      cleanedLength: apiKey?.length
-    })
-    
-    if (!apiKey?.startsWith('test_')) {
-      throw new Error('API key must start with test_')
+    if (!apiKey?.startsWith('testsk_')) {
+      throw new Error('Invalid API key format. Key should start with testsk_')
     }
 
-    const { Svix } = await import('svix')
-    const svix = new Svix(apiKey, {
-      region: 'eu',
-      serverUrl: 'https://api.eu.svix.com'
+    console.log('API Key validation:', {
+      keyPrefix: apiKey.substring(0, 7),
+      keyLength: apiKey.length
     })
 
-    const apps = await svix.application.list()
-    console.log('Applications found:', apps.data?.length || 0)
+    // Створюємо додаток через API
+    const createAppResponse = await fetch('https://api.eu.svix.com/api/v1/app/', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        name: 'My First App',
+        uid: `app-${Date.now()}`, // Унікальний ідентифікатор
+        rateLimit: 100 // Додаємо ліміт запитів
+      })
+    })
+
+    const createAppResult = await createAppResponse.json()
+    console.log('Create app response:', {
+      status: createAppResponse.status,
+      headers: Object.fromEntries(createAppResponse.headers.entries()),
+      body: createAppResult
+    })
+
+    if (!createAppResponse.ok) {
+      throw new Error(`Failed to create app: ${JSON.stringify(createAppResult)}`)
+    }
     
     return new Response(JSON.stringify({
       success: true,
-      applications: apps.data || []
+      application: createAppResult
     }), {
       status: 200,
       headers,
     })
   } catch (error: any) {
-    console.error('Error details:', {
+    console.error('Full error details:', {
       message: error.message,
-      type: error.constructor.name,
-      code: error.code,
-      originalKey: process.env.SVIX_API_KEY
+      status: error.status,
+      response: error.response,
+      stack: error.stack
     })
     
     return new Response(
       JSON.stringify({ 
         success: false,
         error: error.message,
-        type: error.constructor.name
+        details: error.stack
       }), 
       { 
         status: error.code || 500,
