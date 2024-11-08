@@ -35,7 +35,10 @@ export default async function handler(req: Request) {
     }
 
     const { Svix } = await import('svix')
-    const svix = new Svix(apiKey)
+    const svix = new Svix(apiKey, {
+      region: 'eu',
+      serverUrl: 'https://api.eu.svix.com'
+    })
 
     const apps = await svix.application.list()
     console.log('Applications found:', apps.data?.length || 0)
