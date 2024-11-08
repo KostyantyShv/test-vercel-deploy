@@ -15,19 +15,29 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const apiKey = process.env.SVIX_API_KEY?.replace('.eu', '')
+    const apiKey = process.env.SVIX_API_KEY
     
     if (!apiKey?.startsWith('testsk_')) {
-      throw new Error('Invalid API key format. Key should start with testsk_')
+      throw new Error('Invalid API key format')
     }
 
-    console.log('API Key validation:', {
-      keyPrefix: apiKey.substring(0, 7),
-      keyLength: apiKey.length
+    // 1. Отримаємо список додатків
+    const listAppsResponse = await fetch('https://api.eu.svix.com/api/v1/app/', {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      }
     })
 
-    // Створюємо додаток через API
-    const createAppResponse = await fetch('https://api.eu.svix.com/api/v1/app/', {
+    const listAppsResult = await listAppsResponse.json()
+    const app = listAppsResult.data?.[0]
+    
+    if (!app) {
+      throw new Error('No applications found')
+    }
+
+    // 2. Створимо новий ендпоінт
+    const createEndpointResponse = await fetch(`https://api.eu.svix.com/api/v1/app/${app.id}/endpoint/`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -35,43 +45,75 @@ export default async function handler(req: Request) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        name: 'My First App',
-        uid: `app-${Date.now()}`, // Унікальний ідентифікатор
-        rateLimit: 100 // Додаємо ліміт запитів
+        url: 'https://test-vercel-deploy-nine-steel.vercel.app/api/webhook',
+        description: 'Test webhook endpoint',
+        version: 1,
+        rateLimit: 100,
+        uid: `endpoint-${Date.now()}`,
+        disabled: false
       })
     })
 
-    const createAppResult = await createAppResponse.json()
-    console.log('Create app response:', {
-      status: createAppResponse.status,
-      headers: Object.fromEntries(createAppResponse.headers.entries()),
-      body: createAppResult
+    const createEndpointResult = await createEndpointResponse.json()
+    console.log('Create endpoint response:', {
+      status: createEndpointResponse.status,
+      body: createEndpointResult
     })
 
-    if (!createAppResponse.ok) {
-      throw new Error(`Failed to create app: ${JSON.stringify(createAppResult)}`)
-    }
+    // 3. Отримаємо список всіх ендпоінтів
+    const endpointsResponse = await fetch(`https://api.eu.svix.com/api/v1/app/${app.id}/endpoint/`, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      }
+    })
+
+    const endpointsResult = await endpointsResponse.json()
     
+    // Надсилаємо тестове повідомлення
+    const messageResponse = await fetch(`https://api.eu.svix.com/api/v1/app/${app.id}/msg/`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        eventType: 'test.event',
+        payload: {
+          message: 'Hello from Svix!',
+          timestamp: new Date().toISOString(),
+          data: {
+            test: true,
+            value: Math.random()
+          }
+        }
+      })
+    })
+
+    const messageResult = await messageResponse.json()
+    console.log('Message sent:', messageResult)
+
     return new Response(JSON.stringify({
       success: true,
-      application: createAppResult
+      application: app,
+      newEndpoint: createEndpointResult,
+      allEndpoints: endpointsResult.data || []
     }), {
       status: 200,
       headers,
     })
   } catch (error: any) {
-    console.error('Full error details:', {
+    console.error('API Error:', {
       message: error.message,
-      status: error.status,
-      response: error.response,
-      stack: error.stack
+      response: error.response?.data
     })
     
     return new Response(
       JSON.stringify({ 
         success: false,
         error: error.message,
-        details: error.stack
+        details: error.response?.data
       }), 
       { 
         status: error.code || 500,
