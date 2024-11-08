@@ -15,18 +15,19 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const { Svix } = await import('svix')
-    const svix = new Svix(process.env.SVIX_API_KEY || 'test_key', {
-      serverUrl: 'https://api.eu.svix.com'
-    })
-    const result = await svix.application.list()
+    // Замість використання Svix API, повернемо тестові дані
+    const mockData = {
+      success: true,
+      message: "Test response without Svix",
+      timestamp: new Date().toISOString()
+    }
     
-    return new Response(JSON.stringify(result), {
+    return new Response(JSON.stringify(mockData), {
       status: 200,
       headers,
     })
   } catch (error: any) {
-    console.error('Svix error:', error)
+    console.error('API error:', error)
     return new Response(
       JSON.stringify({ error: error.message || 'Unknown error occurred' }), 
       { 
