@@ -4,6 +4,11 @@ export const config = {
   runtime: 'edge'
 }
 
+interface WebhookEvent {
+  type: string;
+  data: any;
+}
+
 export default async function handler(req: Request) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -31,7 +36,6 @@ export default async function handler(req: Request) {
 
     const payload = await req.text()
     
-    // Отримуємо заголовки для верифікації
     const svixId = req.headers.get('svix-id')
     const svixTimestamp = req.headers.get('svix-timestamp')
     const svixSignature = req.headers.get('svix-signature')
@@ -47,13 +51,12 @@ export default async function handler(req: Request) {
       throw new Error('Missing required Svix headers')
     }
 
-    // Верифікуємо підпис
     const wh = new Webhook(webhookSecret)
     const evt = wh.verify(payload, {
       'svix-id': svixId,
       'svix-timestamp': svixTimestamp,
       'svix-signature': svixSignature
-    })
+    }) as WebhookEvent
 
     console.log('Verified webhook event:', {
       type: evt.type,
