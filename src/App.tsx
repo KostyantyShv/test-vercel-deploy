@@ -2,9 +2,12 @@ import './App.css'
 import useSWR from 'swr'
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
+const API_URL = import.meta.env.PROD 
+  ? 'https://test-vercel-deploy-nine-steel.vercel.app/api/webhook'
+  : '/api/webhook'
 
 function App() {
-  const { data: apiData, error: apiError } = useSWR('/api/webhook', fetcher)
+  const { data: apiData, error: apiError } = useSWR(API_URL, fetcher)
   const { data, error, isLoading } = useSWR('https://api.github.com/repos/vercel/swr', fetcher)
 
   if (error || apiError) return <div>Failed to load: {error?.message || apiError?.message}</div>
