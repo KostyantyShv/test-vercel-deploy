@@ -6,6 +6,11 @@ export default defineConfig({
   build: {
     sourcemap: true,
     minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        format: 'esm'
+      }
+    }
   },
   server: {
     port: 3000,
